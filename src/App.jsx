@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Sun, Moon, Send, Trash2, Settings as SettingsIcon, LayoutGrid, ChevronDown, Sparkles } from 'lucide-react';
+import { Sun, Moon, Send, Trash2, Settings as SettingsIcon, LayoutGrid, ChevronDown, Sparkles, Bot, Server } from 'lucide-react';
 import { SettingsModal } from './components/SettingsModal';
 import { MessageBubble } from './components/MessageBubble';
 import { OllamaClient } from './utils/OllamaClient';
@@ -29,6 +29,8 @@ function App() {
     scrollToBottom();
   }, [messages]);
 
+  const [isConnected, setIsConnected] = useState(false);
+
   useEffect(() => {
     localStorage.setItem('ollama-config', JSON.stringify(config));
     fetchModels();
@@ -42,11 +44,14 @@ function App() {
     try {
       const modelList = await client.listModels();
       setModels(modelList);
+      setIsConnected(true);
       if (modelList.length > 0 && !selectedModel) {
         setSelectedModel(modelList[0].name);
       }
     } catch (err) {
       console.error('Failed to fetch models');
+      setIsConnected(false);
+      setModels([]);
     }
   };
 
@@ -101,10 +106,18 @@ function App() {
           </div>
           <div>
             <h1 className="font-heading text-xl font-bold tracking-tight">Ollama Web</h1>
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-              <span className="text-[10px] text-secondary font-medium uppercase tracking-widest">{config.url}:{config.port}</span>
-            </div>
+            <button 
+              onClick={() => setIsSettingsOpen(true)}
+              className="flex items-center gap-2 group hover:opacity-80 transition-opacity"
+            >
+              <span className={clsx(
+                "w-2 h-2 rounded-full",
+                isConnected ? "bg-green-500 animate-pulse" : "bg-red-500"
+              )}></span>
+              <span className="text-[10px] text-secondary font-medium uppercase tracking-widest">
+                {isConnected ? `${config.url}:${config.port}` : "Disconnected"}
+              </span>
+            </button>
           </div>
         </div>
 
@@ -155,10 +168,28 @@ function App() {
       {/* Chat Area */}
       <main className="flex-1 overflow-y-auto mb-6 px-2 space-y-4">
         {messages.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-center space-y-4 opacity-50 py-20">
-            <Bot className="w-16 h-16 text-indigo-500 mb-2" />
-            <h2 className="text-2xl font-heading font-bold">How can I help you today?</h2>
-            <p className="max-w-md text-secondary">Connect to your local Ollama instance and start chatting with your favorite open-source models.</p>
+          <div className="h-full flex flex-col items-center justify-center text-center space-y-4 py-20">
+            {isConnected ? (
+              <>
+                <Bot className="w-16 h-16 text-indigo-500 mb-2 opacity-50" />
+                <h2 className="text-2xl font-heading font-bold opacity-80">How can I help you today?</h2>
+                <p className="max-w-md text-secondary">Ready to chat with {selectedModel || 'your models'}.</p>
+              </>
+            ) : (
+              <>
+                <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mb-2">
+                  <Server className="w-8 h-8 text-red-500" />
+                </div>
+                <h2 className="text-2xl font-heading font-bold">Server Disconnected</h2>
+                <p className="max-w-md text-secondary">Could not reach the Ollama server at {config.url}:{config.port}.</p>
+                <button 
+                  onClick={() => setIsSettingsOpen(true)}
+                  className="btn-primary flex items-center gap-2"
+                >
+                  <SettingsIcon className="w-4 h-4" /> Configure Server
+                </button>
+              </>
+            )}
           </div>
         ) : (
           messages.map((m, i) => <MessageBubble key={i} message={m} />)

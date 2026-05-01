@@ -26,6 +26,15 @@ OLLAMA_ORIGINS="https://ibrezm1.github.io,http://localhost:*" ollama serve
 $env:OLLAMA_ORIGINS="https://ibrezm1.github.io,http://localhost:*"; ollama serve
 ```
 
+### Alternative: Using a CORS Proxy
+If you cannot change Ollama's environment variables, you can run a local proxy to bypass CORS restrictions:
+
+```bash
+npx local-cors-proxy --proxyUrl http://192.168.1.65:11434 --port 8010 --proxyPartial ""
+```
+*Note: Replace `192.168.1.65` with your Ollama server's IP if different. Then, set your server address in the Lollama settings to `http://localhost:8010`.*
+
+
 ### 2. Local Development
 ```bash
 npm install

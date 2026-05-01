@@ -45,6 +45,8 @@ export class OllamaClient {
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let fullContent = '';
+      let fullThinking = '';
+      let combined = '';
 
       while (true) {
         const { done, value } = await reader.read();
@@ -57,12 +59,40 @@ export class OllamaClient {
           if (!line.trim()) continue;
           try {
             const json = JSON.parse(line);
-            if (json.message && json.message.content) {
+            let updated = false;
+
+            // Handle content
+            if (json.message?.content !== undefined) {
               fullContent += json.message.content;
-              onChunk(fullContent, false);
+              updated = true;
+            } else if (json.response !== undefined) {
+              fullContent += json.response;
+              updated = true;
             }
-            if (json.done) {
-              onChunk(fullContent, true);
+
+            // Handle thinking (Ollama API extracts thinking into a separate field for some models)
+            if (json.message?.thinking !== undefined) {
+              fullThinking += json.message.thinking;
+              updated = true;
+            } else if (json.thinking !== undefined) {
+              fullThinking += json.thinking;
+              updated = true;
+            }
+
+            if (updated || json.done) {
+              combined = fullContent;
+              
+              // If we received out-of-band thinking, wrap it in <think> tags for the UI
+              if (fullThinking && !fullContent.includes('<think>')) {
+                combined = `<think>\n${fullThinking}`;
+                // Close the tag if content has started or stream is done
+                if (fullContent.length > 0 || json.done) {
+                  combined += `\n</think>\n\n`;
+                }
+                combined += fullContent;
+              }
+
+              onChunk(combined, json.done || false);
             }
           } catch (e) {
             console.warn('Failed to parse chunk:', line);

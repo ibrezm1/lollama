@@ -56,7 +56,7 @@ function App() {
   };
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
   };
 
   const handleSend = async () => {
@@ -75,7 +75,8 @@ function App() {
       await client.chat(selectedModel, newMessages, (content, done) => {
         setMessages(prev => {
           const updated = [...prev];
-          updated[updated.length - 1].content = content;
+          const lastIndex = updated.length - 1;
+          updated[lastIndex] = { ...updated[lastIndex], content };
           return updated;
         });
         if (done) setIsLoading(false);
